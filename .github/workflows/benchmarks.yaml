@@ -1,0 +1,66 @@
+name: RunBenchmarks
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v3
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4.0.0
+        with:
+          java-version: '21'
+          distribution: 'liberica'
+          architecture: x64
+
+      - name: Checkout kotlinx-io
+        run: |
+          cd /tmp
+          git clone https://github.com/Kotlin/kotlinx-io.git
+          cd -
+
+      - name: Build kotlinx-io/dev
+        run: |
+          cd /tmp/kotlinx-io
+          git checkout private/dev-for-serialization
+          ./gradlew publishToMavenLocal
+          cd -
+
+      - name: Build benchmarks w/ kotlinx-io/dev
+        run: ./gradlew jmhJar
+
+      - name: Run benchmarks w/ kotlinx-io/dev
+        run: |
+          java -jar ./benchmarks -f2 -tu ns -bm avgt -w 5 KotlinxIo
+
+      - name: Build kotlinx-io/pub-api
+        run: |
+          cd /tmp/kotlinx-io
+          git checkout private/segments-public-api-for-serialization
+          ./gradlew publishToMavenLocal
+          cd -
+
+      - name: Build benchmarks w/ kotlinx-io/pub-api
+        run: ./gradlew jmhJar
+
+      - name: Run benchmarks w/ kotlinx-io/pub-api
+        run: |
+          java -jar ./benchmarks -f2 -tu ns -bm avgt -w 5 KotlinxIo
+
+      - name: Build kotlinx-io/dbb
+        run: |
+          cd /tmp/kotlinx-io
+          git checkout private/dbb-benchmarking-for-serialization
+          ./gradlew publishToMavenLocal
+          cd -
+
+      - name: Build benchmarks w/ kotlinx-io/dbb
+        run: ./gradlew jmhJar
+
+      - name: Run benchmarks w/ kotlinx-io/dbb
+        run: |
+          java -jar ./benchmarks -f2 -tu ns -bm avgt -w 5 KotlinxIo
