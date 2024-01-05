@@ -35,7 +35,7 @@ jobs:
 
       - name: Run benchmarks w/ kotlinx-io/dev
         run: |
-          java -jar ./benchmarks -f2 -tu ns -bm avgt -w 5 KotlinxIo
+          java -jar ./benchmarks.jar -f2 -tu ns -bm avgt -w 5 KotlinxIo
 
       - name: Build kotlinx-io/pub-api
         run: |
@@ -49,7 +49,7 @@ jobs:
 
       - name: Run benchmarks w/ kotlinx-io/pub-api
         run: |
-          java -jar ./benchmarks -f2 -tu ns -bm avgt -w 5 KotlinxIo
+          java -jar ./benchmarks.jar -f2 -tu ns -bm avgt -w 5 KotlinxIo
 
       - name: Build kotlinx-io/dbb
         run: |
@@ -63,4 +63,4 @@ jobs:
 
       - name: Run benchmarks w/ kotlinx-io/dbb
         run: |
-          java -jar ./benchmarks -f2 -tu ns -bm avgt -w 5 KotlinxIo
+          java -jar ./benchmarks.jar -f2 -tu ns -bm avgt -w 5 KotlinxIo
