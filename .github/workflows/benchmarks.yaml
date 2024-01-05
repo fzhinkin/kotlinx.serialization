@@ -66,7 +66,7 @@ jobs:
           java -jar ./benchmarks.jar -f2 -tu ns -bm avgt -w 5 KotlinxIo -rf json -rff dbb.json
 
       - name: Archive results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: results
-          path: **.json
+          path: "*.json"
