@@ -65,6 +65,20 @@ jobs:
         run: |
           java -jar ./benchmarks.jar -f2 -tu ns -bm avgt -w 5 KotlinxIo -rf json -rff dbb.json
 
+      - name: Build kotlinx-io/dbb-unsafe
+        run: |
+          cd /tmp/kotlinx-io
+          git checkout private/dbb-benchmarking-unsafe-for-serialization
+          ./gradlew publishToMavenLocal
+          cd -
+
+      - name: Build benchmarks w/ kotlinx-io/dbb-unsafe
+        run: ./gradlew jmhJar
+
+      - name: Run benchmarks w/ kotlinx-io/dbb-unsafe
+        run: |
+          java --add-opens java.base/java.nio=ALL-UNNAMED -jar ./benchmarks.jar -f2 -tu ns -bm avgt -w 5 KotlinxIo -rf json -rff dbb-unsafe.json
+
       - name: Archive results
         uses: actions/upload-artifact@v4
         with:
