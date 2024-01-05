@@ -2,14 +2,20 @@ package kotlinx.benchmarks.json
 
 import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.module.kotlin.*
+import kotlinx.io.*
+import kotlinx.io.files.*
 import kotlinx.serialization.*
 import kotlinx.serialization.json.*
 import kotlinx.serialization.json.okio.encodeToBufferedSink
-import okio.blackholeSink
-import okio.buffer
+import kotlinx.serialization.json.kotlinx.io.encodeToBufferedSink
+import okio.*
+import okio.FileSystem
+import okio.Path.Companion.toPath
 import org.openjdk.jmh.annotations.*
 import java.io.ByteArrayInputStream
 import java.io.OutputStream
+import java.nio.channels.*
+import java.nio.file.*
 import java.util.concurrent.*
 
 @Warmup(iterations = 7, time = 1)
@@ -69,10 +75,23 @@ open class JacksonComparisonBenchmark {
     )
 
     private val devNullSink = blackholeSink().buffer()
+    private val devNullKxIoSink = discardingSink().buffered()
+    private val devNullFileSink = FileSystem.SYSTEM.sink("/dev/null".toPath()).buffer()
+    private val devNullKxIoFileSink = SystemFileSystem.sink(Path("/dev/null")).buffered()
+    private val devNullChannel = FileChannel.open(
+        Paths.get("/dev/null"),
+        StandardOpenOption.WRITE)
     private val devNullStream = object : OutputStream() {
         override fun write(b: Int) {}
         override fun write(b: ByteArray) {}
         override fun write(b: ByteArray, off: Int, len: Int) {}
+    }
+
+    @TearDown
+    fun closeFiles() {
+        devNullFileSink.close()
+        devNullKxIoFileSink.close()
+        devNullChannel.close()
     }
 
     private val stringData = Json.encodeToString(DefaultPixelEvent.serializer(), data)
@@ -105,6 +124,28 @@ open class JacksonComparisonBenchmark {
     fun kotlinToOkio() = Json.encodeToBufferedSink(DefaultPixelEvent.serializer(), data, devNullSink)
 
     @Benchmark
+    fun kotlinToOkioFile() {
+        Json.encodeToBufferedSink(DefaultPixelEvent.serializer(), data, devNullFileSink)
+        devNullFileSink.flush()
+    }
+
+    @Benchmark
+    fun kotlinToKotlinxIo() = Json.encodeToBufferedSink(DefaultPixelEvent.serializer(), data, devNullKxIoSink)
+
+    @Benchmark
+    fun kotlinToKotlinxIoFile() {
+        Json.encodeToBufferedSink(DefaultPixelEvent.serializer(), data, devNullKxIoFileSink)
+        devNullKxIoFileSink.flush()
+    }
+
+    @Benchmark
+    fun kotlinToKotlinxIoFileChannel() {
+        val buffer = kotlinx.io.Buffer()
+        Json.encodeToBufferedSink(DefaultPixelEvent.serializer(), data, buffer)
+        devNullChannel.write(buffer)
+    }
+
+    @Benchmark
     fun kotlinToStringWithEscapes(): String = Json.encodeToString(DefaultPixelEvent.serializer(), dataWithEscapes)
 
     @Benchmark
@@ -115,6 +156,9 @@ open class JacksonComparisonBenchmark {
 
     @Benchmark
     fun kotlinSmallToOkio() = Json.encodeToBufferedSink(SmallDataClass.serializer(), smallData, devNullSink)
+
+    @Benchmark
+    fun kotlinSmallToKotlinxIo() = Json.encodeToBufferedSink(SmallDataClass.serializer(), smallData, devNullKxIoSink)
 
     @Benchmark
     fun jacksonFromString(): DefaultPixelEvent = objectMapper.readValue(stringData, DefaultPixelEvent::class.java)

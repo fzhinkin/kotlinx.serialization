@@ -1,9 +1,18 @@
 package kotlinx.benchmarks.json
 
 import kotlinx.benchmarks.model.*
+import kotlinx.io.*
+import kotlinx.io.files.*
 import kotlinx.serialization.json.*
+import kotlinx.serialization.json.okio.*
+import kotlinx.serialization.json.kotlinx.io.*
+import okio.*
+import okio.FileSystem
+import okio.Path.Companion.toPath
 import org.openjdk.jmh.annotations.*
 import java.io.OutputStream
+import java.nio.channels.*
+import java.nio.file.*
 import java.util.concurrent.*
 
 @Warmup(iterations = 7, time = 1)
@@ -30,10 +39,24 @@ open class TwitterBenchmark {
         override fun write(b: ByteArray) {}
         override fun write(b: ByteArray, off: Int, len: Int) {}
     }
+    private val devNullSink = blackholeSink().buffer()
+    private val devNullKxIoSink = discardingSink().buffered()
+    private val devNullFileSink = FileSystem.SYSTEM.sink("/dev/null".toPath()).buffer()
+    private val devNullKxIoFileSink = SystemFileSystem.sink(Path("/dev/null")).buffered()
+    private val devNullChannel = FileChannel.open(
+        Paths.get("/dev/null"),
+        StandardOpenOption.WRITE)
 
     @Setup
     fun init() {
         require(twitter == Json.decodeFromString(Twitter.serializer(), Json.encodeToString(Twitter.serializer(), twitter)))
+    }
+
+    @TearDown
+    fun closeFiles() {
+        devNullFileSink.close()
+        devNullKxIoFileSink.close()
+        devNullChannel.close()
     }
 
     // Order of magnitude: 4-7 op/ms
@@ -48,4 +71,29 @@ open class TwitterBenchmark {
 
     @Benchmark
     fun encodeTwitterStream() = Json.encodeToStream(Twitter.serializer(), twitter, devNullStream)
+
+    @Benchmark
+    fun encodeTwitterOkio() = Json.encodeToBufferedSink(Twitter.serializer(), twitter, devNullSink)
+
+    @Benchmark
+    fun encodeTwitterOkioFile() {
+        Json.encodeToBufferedSink(Twitter.serializer(), twitter, devNullFileSink)
+        devNullFileSink.flush()
+    }
+
+    @Benchmark
+    fun encodeTwitterKotlinxIo() = Json.encodeToBufferedSink(Twitter.serializer(), twitter, devNullKxIoSink)
+
+    @Benchmark
+    fun encodeTwitterKotlinxIoFile() {
+        Json.encodeToBufferedSink(Twitter.serializer(), twitter, devNullKxIoFileSink)
+        devNullKxIoFileSink.flush()
+    }
+
+    @Benchmark
+    fun encodeTwitterKotlinxIoFileChannel() {
+        val buffer = kotlinx.io.Buffer()
+        Json.encodeToBufferedSink(Twitter.serializer(), twitter, buffer)
+        devNullChannel.write(buffer)
+    }
 }

@@ -45,8 +45,10 @@ dependencies {
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.13.3'
     implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.13.3'
     implementation "com.squareup.okio:okio:$okio_version"
+    implementation "org.jetbrains.kotlinx:kotlinx-io-core:0.3.1-SNAPSHOT"
     implementation project(':kotlinx-serialization-core')
     implementation project(':kotlinx-serialization-json')
     implementation project(':kotlinx-serialization-json-okio')
+    implementation project(':kotlinx-serialization-json-kotlinx-io')
     implementation project(':kotlinx-serialization-protobuf')
 }
